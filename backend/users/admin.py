@@ -1,38 +1,13 @@
 from django.contrib import admin
 
-from .models import Subscribe, User
+from .models import CustomUser
 
 
-class BaseAdminSettings(admin.ModelAdmin):
-    """Базовая кастомизация админ панели."""
-    empty_value_display = '-пусто-'
-    list_filter = ('email', 'username')
+class UserAdmin(admin.ModelAdmin):
+    list_display = ("id", "username", "first_name", "last_name", "email")
+    search_fields = ("email", "username")
+    list_filter = ("email", "username")
+    empty_value_display = "-пусто-"
 
 
-class UsersAdmin(BaseAdminSettings):
-    """Кастомизация админ панели (управление пользователями)."""
-    list_display = (
-        'id',
-        'role',
-        'username',
-        'email',
-        'first_name',
-        'last_name'
-    )
-    list_display_links = ('id', 'username')
-    search_fields = ('role', 'username')
-
-
-class SubscribeAdmin(admin.ModelAdmin):
-    """Кастомизация админ панели (управление подписками)."""
-    list_display = (
-        'id',
-        'user',
-        'author'
-    )
-    list_display_links = ('id', 'user')
-    search_fields = ('user',)
-
-
-admin.site.register(User, UsersAdmin)
-admin.site.register(Subscribe, SubscribeAdmin)
+admin.site.register(CustomUser, UserAdmin)

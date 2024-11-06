@@ -1,130 +1,232 @@
-from datetime import datetime
-from django.db.models import Sum
+import drf_yasg.utils
+from api.filters import IngredientSearchFilter, RecipesFilter
+from api.pagination import CustomPagination
+from api.permissions import IsAdminOrReadOnly, IsOwnerOrReadOnly
+from api.serializers import (FollowSerializer,
+                             IngredientSerializer,
+                             RecipeFavoritesSerializer,
+                             RecipeSerializer,
+                             ShoppingListSerializer,
+                             TagSerializer
+                             )
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import status
+from django.utils.decorators import method_decorator
+from drf_yasg.utils import swagger_auto_schema
+from recipes.models import (CustomUser,
+                            Follow,
+                            Ingredient,
+                            IngredientRecipes,
+                            Recipe,
+                            RecipeFavorites,
+                            ShoppingList,
+                            Tag
+                            )
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import SAFE_METHODS, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.status import HTTP_400_BAD_REQUEST
-from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
-
-from recipes.models import (Favorite, Ingredient, IngredientInRecipe, Recipe,
-                            ShoppingCart, Tag)
-from .filters import IngredientFilter, RecipeFilter
-from .pagination import CustomPagination
-from .permissions import IsAdminOrReadOnly, IsAdminAuthorOrReadOnly
-from .serializers import (IngredientSerializer, RecipeReadSerializer,
-                          RecipeShortSerializer, RecipeWriteSerializer,
-                          TagSerializer)
 
 
-class TagViewSet(ReadOnlyModelViewSet):
-    """Вьюсет для модели тега."""
+class TagViewSet(viewsets.ReadOnlyModelViewSet):
+    """ViewSet Тег
+    Получение списка тегов /
+    конкретного тега
+    """
+
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
-    permission_classes = (IsAdminOrReadOnly,)
+    permission_classes = [IsAdminOrReadOnly]
 
 
-class IngredientViewSet(ReadOnlyModelViewSet):
-    """Вьюсет для модели ингридиента."""
+class IngredientsViewSet(viewsets.ReadOnlyModelViewSet):
+    """ViewSet Ингредиенты
+    Получение списка ингредиентов /
+    конкретного ингредиента
+    """
+
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
-    permission_classes = (IsAdminOrReadOnly,)
-    filter_backends = (DjangoFilterBackend,)
-    filterset_class = IngredientFilter
+    permission_classes = [IsAdminOrReadOnly]
+    filter_backends = [IngredientSearchFilter]
+    search_fields = ["^name"]
 
 
-class RecipeViewSet(ModelViewSet):
-    """Вьюсет для модели рецепта."""
+@method_decorator(
+    name="create",
+    decorator=swagger_auto_schema(
+        operation_description="""
+    #### Пример создания рецепта
+    ```
+    {
+        "ingredients": [
+            {
+                "id": 1123,
+                "amount": 10
+            },
+            {
+                "id": 1124,
+                "amount": 20
+            }
+        ],
+        "tags": [
+            1,
+            2
+        ],
+        "image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAg
+        MAAABieywaAAAACVBMVEUAAAD///9fX1/S0ecCAAAACXBIWXMAAA7EAAAOxAGVKw4
+        bAAAACklEQVQImWNoAAAAggCByxOyYQAAAABJRU5ErkJggg==",
+        "name": "string",
+        "text": "string",
+        "cooking_time": 1
+    }
+    ```
+    """
+    ),
+)
+class RecipeViewSet(viewsets.ModelViewSet):
+    """ViewSet Рецепт
+    Получение списка рецептов /
+    конкретного рецепта /
+    создание, редактирование /
+    удаление рецепта
+    """
+
+    serializer_class = RecipeSerializer
     queryset = Recipe.objects.all()
-    permission_classes = (IsAdminAuthorOrReadOnly,)
     pagination_class = CustomPagination
-    filter_backends = (DjangoFilterBackend,)
-    filterset_class = RecipeFilter
+    filterset_class = RecipesFilter
+    permission_classes = [IsOwnerOrReadOnly]
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
-    def get_serializer_class(self):
-        if self.request.method in SAFE_METHODS:
-            return RecipeReadSerializer
-        return RecipeWriteSerializer
+    @action(methods=["GET"], detail=False,
+            permission_classes=[IsAuthenticated])
+    def download_shopping_cart(self, request):
+        """Скачивание списка покупок"""
+        shopping_result = {}
+        ingredients = IngredientRecipes.objects.filter(
+            recipes__shoppinglist__user=request.user
+        ).values_list("ingredients__name",
+                      "ingredients__measurement_unit",
+                      "amount")
 
-    @action(
-        detail=True,
-        methods=['post', 'delete'],
-        permission_classes=[IsAuthenticated]
-    )
-    def favorite(self, request, pk):
-        """Метод для добавления/удаления из избранного."""
-        if request.method == 'POST':
-            return self.add_to(Favorite, request.user, pk)
-        else:
-            return self.delete_from(Favorite, request.user, pk)
+        for ingredient in ingredients:
+            name = ingredient[0]
+            if name not in shopping_result:
+                shopping_result[name] = {
+                    "measurement_unit": ingredient[1],
+                    "amount": ingredient[2],
+                }
+            else:
+                shopping_result[name]["amount"] += ingredient[2]
 
-    @action(
-        detail=True,
-        methods=['post', 'delete'],
-        permission_classes=[IsAuthenticated]
-    )
-    def shopping_cart(self, request, pk):
-        """Метод для добавления/удаления из списка покупок."""
-        if request.method == 'POST':
-            return self.add_to(ShoppingCart, request.user, pk)
-        else:
-            return self.delete_from(ShoppingCart, request.user, pk)
+        shopping_itog = (
+            f"{name} - {value['amount']} " f"{value['measurement_unit']}\n"
+            for name, value in shopping_result.items()
+        )
+        response = HttpResponse(shopping_itog, content_type="text/plain")
+        response["Content-Disposition"] = \
+            'attachment; filename="shoppinglist.txt"'
+        return response
 
-    def add_to(self, model, user, pk):
-        """Метод для добавления."""
-        if model.objects.filter(user=user, recipe__id=pk).exists():
-            return Response({'errors': 'Рецепт уже добавлен!'},
-                            status=status.HTTP_400_BAD_REQUEST)
-        recipe = get_object_or_404(Recipe, id=pk)
-        model.objects.create(user=user, recipe=recipe)
-        serializer = RecipeShortSerializer(recipe)
+
+class RecipeFavoritesViewSet(viewsets.ModelViewSet):
+    """ViewSet Списки избранных рецептов
+    Добавление /
+    удаление из списка
+    """
+
+    serializer_class = RecipeFavoritesSerializer
+    queryset = RecipeFavorites.objects.all()
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(request_body=drf_yasg.utils.no_body)
+    def create(self, request, *args, **kwargs):
+        """Добавление рецепта
+        в список избранного
+        """
+        recipes_id = self.kwargs["id"]
+        recipes = get_object_or_404(Recipe, id=recipes_id)
+        RecipeFavorites.objects.create(user=request.user, recipes=recipes)
+        serializer = RecipeFavoritesSerializer()
+        return Response(
+            serializer.to_representation(instance=recipes),
+            status=status.HTTP_201_CREATED,
+        )
+
+    def delete(self, request, *args, **kwargs):
+        """Удаление рецепта
+        из списка избранного
+        """
+        recipes_id = self.kwargs["id"]
+        user_id = request.user.id
+        RecipeFavorites.objects.filter(
+            user__id=user_id, recipes__id=recipes_id
+        ).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class FollowViewSet(viewsets.ModelViewSet):
+    """ViewSet Подписки
+    Cоздание подписки /
+    удаление подписки
+    """
+
+    serializer_class = FollowSerializer
+    pagination_class = CustomPagination
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(request_body=drf_yasg.utils.no_body)
+    def create(self, request, *args, **kwargs):
+        """Создание подписки"""
+        user_id = self.kwargs["id"]
+        user = get_object_or_404(CustomUser, id=user_id)
+        subscribe = Follow.objects.create(user=request.user, author=user)
+        serializer = FollowSerializer(subscribe, context={"request": request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    def delete_from(self, model, user, pk):
-        """Метод для удаления."""
-        obj = model.objects.filter(user=user, recipe__id=pk)
-        if obj.exists():
-            obj.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        return Response({'errors': 'Рецепт уже удален!'},
-                        status=status.HTTP_400_BAD_REQUEST)
+    def delete(self, request, *args, **kwargs):
+        """Удаление подписки"""
+        author_id = self.kwargs["id"]
+        user_id = request.user.id
+        Follow.objects.filter(user_id, author_id).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @action(
-        detail=False,
-        permission_classes=[IsAuthenticated]
-    )
-    def download_shopping_cart(self, request):
-        """Метод для скачивания списка покупок."""
-        user = request.user
-        if not user.shopping_cart.exists():
-            return Response(status=HTTP_400_BAD_REQUEST)
-        ingredients = IngredientInRecipe.objects.filter(
-            recipe__shopping_cart__user=request.user
-        ).values(
-            'ingredient__name',
-            'ingredient__measurement_unit'
-        ).annotate(amount=Sum('amount'))
-        today = datetime.today()
-        shopping_list = (
-            f'Список покупок для: {user.get_full_name()}\n\n'
-            f'Дата: {today:%Y-%m-%d}\n\n'
+
+class ShoppingViewSet(viewsets.ModelViewSet):
+    """ViewSet Список покупок
+    Добавление рецепта в список покупок /
+    удаление рецепта из списка покупок /
+    скачивание списка покупок
+    """
+
+    serializer_class = ShoppingListSerializer
+    pagination_class = CustomPagination
+    queryset = ShoppingList.objects.all()
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(request_body=drf_yasg.utils.no_body)
+    def create(self, request, *args, **kwargs):
+        """Добавление рецепта в
+        список покупок
+        """
+        recipe_id = self.kwargs["id"]
+        recipes = get_object_or_404(Recipe, id=recipe_id)
+        ShoppingList.objects.create(user=request.user, recipes=recipes)
+        serializer = ShoppingListSerializer()
+        return Response(
+            serializer.to_representation(instance=recipes),
+            status=status.HTTP_201_CREATED,
         )
-        shopping_list += '\n'.join([
-            f'- {ingredient["ingredient__name"]} '
-            f'({ingredient["ingredient__measurement_unit"]})'
-            f' - {ingredient["amount"]}'
-            for ingredient in ingredients
-        ])
-        shopping_list += f'\n\nFoodgram ({today:%Y})'
-        filename = f'{user.username}_shopping_list.txt'
-        response = HttpResponse(
-            shopping_list, content_type='text.txt; charset=utf-8'
-        )
-        response['Content-Disposition'] = f'attachment; filename={filename}'
-        return response
+
+    def delete(self, request, *args, **kwargs):
+        """Удаление рецепта из
+        списка покупок
+        """
+        recipe_id = self.kwargs["id"]
+        user_id = request.user.id
+        ShoppingList.objects.filter(user__id=user_id,
+                                    recipes__id=recipe_id).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
