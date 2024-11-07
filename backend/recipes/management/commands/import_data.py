@@ -19,25 +19,35 @@ action = {
 }
 
 
-class Command(BaseCommand): 
-  def add_arguments(self, parser): 
-    parser.add_argument("filename", nargs="+", type=str) 
+class Command(BaseCommand):
+    def add_arguments(self, parser):
+        parser.add_argument("filename", nargs="+", type=str)
 
-  def handle(self, *args, **options):
-    for filename in options["filename"]:
-      path = os.path.join(settings.BASE_DIR, "data/") + filename
-      try:
-        with open(path, "r", encoding="utf-8") as file:
-          reader = csv.reader(file)
-          next(reader) 
-          for row in reader:
+    def handle(self, *args, **options):
+        for filename in options["filename"]:
+            path = os.path.join(settings.BASE_DIR, "data/") + filename
             try:
-              action[filename](row) 
-              self.stdout.write(self.style.SUCCESS(f'Данные из {filename} обработаны успешно'))
-            except Exception as e:
-              self.stdout.write(self.style.ERROR(f'Ошибка при обработке данных из {filename}: {e}'))
-      except FileNotFoundError:
-        self.stdout.write(self.style.ERROR(f'Файл {filename} не найден.'))
-      except Exception as e:
-        self.stdout.write(self.style.ERROR(f'Произошла ошибка при чтении файла {filename}: {e}'))
-    self.stdout.write(self.style.SUCCESS('Обработка данных завершена.')) 
+                with open(path, "r", encoding="utf-8") as file:
+                    reader = csv.reader(file)
+                    next(reader)
+                    for row in reader:
+                    try:
+                        action[filename](row)
+                        self.stdout.write(self.style.SUCCESS(
+                            f'Данные из {filename} обработаны успешно'
+                        ))
+                    except Exception as e:
+                        self.stdout.write(self.style.ERROR(
+                            f'Ошибка при обработке данных из {filename}: {e}'
+                        ))
+                    except FileNotFoundError:
+                        self.stdout.write(self.style.ERROR(
+                            f'Файл {filename} не найден.'
+                        ))
+                    except Exception as e:
+                        self.stdout.write(self.style.ERROR(
+                            f'Произошла ошибка при чтении файла {filename}: {e}'
+                        ))
+                        self.stdout.write(self.style.SUCCESS(
+                            'Обработка данных завершена.'
+                        ))
