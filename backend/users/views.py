@@ -5,7 +5,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 
 
-class CustomUserViewSet(UserViewSet):
+class UserViewSet(UserViewSet):
     """ViewSet пользователя
     Получение списка пользователей /
     Получение определенного пользователя /

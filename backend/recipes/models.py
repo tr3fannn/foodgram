@@ -1,14 +1,13 @@
-from colorfield.fields import ColorField
+
 from django.core.validators import MinValueValidator, RegexValidator
 from django.db import models
-from users.models import CustomUser
+from users.models import User
 
 
 class Tag(models.Model):
     """Модель Тег"""
     id = models.AutoField(primary_key=True)
     name = models.CharField("Название тега", max_length=200, unique=True)
-    color = ColorField("Код цвета", default="#000000", max_length=7)
     slug = models.SlugField("Слаг тега", max_length=200, unique=True)
 
     class Meta:
@@ -57,7 +56,7 @@ class Recipe(models.Model):
         verbose_name="Теги",
     )
     author = models.ForeignKey(
-        CustomUser,
+        User,
         on_delete=models.CASCADE,
         verbose_name="Автор",
         related_name="recipes",
@@ -120,7 +119,7 @@ class ShoppingList(models.Model):
     """Модель Список покупок"""
     id = models.AutoField(primary_key=True)
     user = models.ForeignKey(
-        CustomUser, on_delete=models.CASCADE, verbose_name="Пользователь"
+        User, on_delete=models.CASCADE, verbose_name="Пользователь"
     )
     recipes = models.ForeignKey(Recipe,
                                 verbose_name="Рецепт",
@@ -143,7 +142,7 @@ class RecipeFavorites(models.Model):
     """Модель Избранные рецепты"""
     id = models.AutoField(primary_key=True)
     user = models.ForeignKey(
-        CustomUser, verbose_name="Пользователь", on_delete=models.CASCADE
+        User, verbose_name="Пользователь", on_delete=models.CASCADE
     )
     recipes = models.ForeignKey(Recipe,
                                 verbose_name="Рецепт",
@@ -166,13 +165,13 @@ class Follow(models.Model):
     """Модель Подписки"""
     id = models.AutoField(primary_key=True)
     user = models.ForeignKey(
-        CustomUser,
+        User,
         verbose_name="Подписчик",
         on_delete=models.CASCADE,
         related_name="follower",
     )
     author = models.ForeignKey(
-        CustomUser,
+        User,
         verbose_name="Автор рецепта",
         on_delete=models.CASCADE,
         related_name="following",

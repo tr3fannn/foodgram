@@ -7,13 +7,13 @@ from api.views import (FollowViewSet,
                        )
 from django.urls import include, path, re_path
 from rest_framework import routers
-from users.views import CustomUserViewSet
+from users.views import UserViewSet
 
 app_name = "api"
 
 router = routers.DefaultRouter()
 router.register("tags", TagViewSet)
-router.register("users", CustomUserViewSet)
+router.register("users", UserViewSet)
 router.register("ingredients", IngredientsViewSet)
 router.register("recipes", RecipeViewSet)
 

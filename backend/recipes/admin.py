@@ -4,7 +4,7 @@ from recipes.models import (Follow, Ingredient, IngredientRecipes, Recipe,
 
 
 class TagAdmin(admin.ModelAdmin):
-    list_display = ("name", "color", "slug")
+    list_display = ("name", "slug")
     empty_value_display = "-пусто-"
 
 

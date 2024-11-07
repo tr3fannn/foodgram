@@ -2,17 +2,17 @@ from djoser.serializers import UserCreateSerializer, UserSerializer
 from recipes.models import Follow
 from rest_framework import serializers
 from rest_framework.serializers import SerializerMethodField
-from users.models import CustomUser
+from users.models import User
 
 
-class CustomUserSerializer(UserSerializer):
+class UserSerializer(UserSerializer):
     """Сериализатор для получения списка
     пользователей и определенного пользователя"""
 
     is_subscribed = SerializerMethodField(read_only=True)
 
     class Meta:
-        model = CustomUser
+        model = User
         fields = (
             "email",
             "id",
@@ -30,14 +30,14 @@ class CustomUserSerializer(UserSerializer):
         return Follow.objects.filter(user=user, author=obj.id).exists()
 
 
-class CustomUserCreateSerializer(UserCreateSerializer):
+class UserCreateSerializer(UserCreateSerializer):
     """Создание пользователя"""
 
     email = serializers.EmailField()
     username = serializers.CharField()
 
     class Meta:
-        model = CustomUser
+        model = User
         fields = ("email",
                   "id",
                   "password",

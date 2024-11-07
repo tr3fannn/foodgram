@@ -13,7 +13,7 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from drf_yasg.utils import swagger_auto_schema
-from recipes.models import (CustomUser,
+from recipes.models import (User,
                             Follow,
                             Ingredient,
                             IngredientRecipes,
@@ -182,7 +182,7 @@ class FollowViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         """Создание подписки"""
         user_id = self.kwargs["id"]
-        user = get_object_or_404(CustomUser, id=user_id)
+        user = get_object_or_404(User, id=user_id)
         subscribe = Follow.objects.create(user=request.user, author=user)
         serializer = FollowSerializer(subscribe, context={"request": request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)

@@ -12,7 +12,7 @@ from recipes.models import (Follow,
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 from django.core.exceptions import ValidationError
-from users.serializers import CustomUserSerializer
+from users.serializers import UserSerializer
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -53,7 +53,7 @@ class RecipeSerializer(serializers.ModelSerializer):
     ingredients = IngredientRecipesSerializer(
         many=True, source="ingredientrecipes_set", read_only=True
     )
-    author = CustomUserSerializer(read_only=True)
+    author = UserSerializer(read_only=True)
     is_favorited = serializers.SerializerMethodField(read_only=True)
     is_in_shopping_cart = serializers.SerializerMethodField(read_only=True)
 
