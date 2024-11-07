@@ -49,5 +49,4 @@ class Command(BaseCommand):
                                 f'Произошла ошибка при чтении файла {filename}: {e}'
                             ))
                             self.stdout.write(self.style.SUCCESS(
-                                'Обработка данных завершена.'
-                            ))
+                                'Обработка данных завершена.'))
