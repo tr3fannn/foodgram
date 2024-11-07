@@ -31,4 +31,3 @@ class Command(BaseCommand):
                 next(reader)
                 for row in reader:
                     action[filename](row)
-                    self.stdout.write(self.style.SUCCESS(f'Данные из {filename} обработаны успешно'))
