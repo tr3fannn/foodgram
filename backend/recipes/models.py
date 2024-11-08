@@ -6,7 +6,6 @@ from users.models import User
 
 class Tag(models.Model):
     """Модель Тег"""
-    id = models.AutoField(primary_key=True)
     name = models.CharField("Название тега", max_length=200, unique=True)
     slug = models.SlugField("Слаг тега", max_length=200, unique=True)
 
@@ -21,7 +20,6 @@ class Tag(models.Model):
 
 class Ingredient(models.Model):
     """Модель Ингредиент"""
-    id = models.AutoField(primary_key=True)
     name = models.CharField(
         "Название ингредиента",
         max_length=200,
@@ -44,7 +42,6 @@ class Ingredient(models.Model):
 
 class Recipe(models.Model):
     """Модель Рецепт"""
-    id = models.AutoField(primary_key=True)
     ingredients = models.ManyToManyField(
         Ingredient,
         through="IngredientRecipes",

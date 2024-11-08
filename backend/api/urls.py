@@ -6,12 +6,13 @@ from api.views import (FollowViewSet,
                        TagViewSet
                        )
 from django.urls import include, path, re_path
-from rest_framework import routers
+from rest_framework.routers import DefaultRouter
 from users.views import UserViewSet
 
 app_name = "api"
 
-router = routers.DefaultRouter()
+router = DefaultRouter()
+
 router.register("tags", TagViewSet)
 router.register("users", UserViewSet)
 router.register("ingredients", IngredientsViewSet)
