@@ -27,7 +27,7 @@ ALLOWED_HOSTS = [
     '127.0.0.1',
     'backend',
     '51.250.22.11',
-    'tr3fannnn.zapto.org',
+    'tr3ffoodgram.zapto.org',
 ]
 
 # Application definition
