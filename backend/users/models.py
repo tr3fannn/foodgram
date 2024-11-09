@@ -11,7 +11,6 @@ class User(AbstractUser):
     ROLES_CHOICES = [
         (USER, "user"),
         (ADMIN, "admin"),
-    
     ]
     id = models.AutoField(primary_key=True)
     email = models.EmailField(
@@ -51,6 +50,7 @@ class User(AbstractUser):
     def is_user(self):
         return self.role == User.USER
 
+
 class Subscribe(models.Model):
     user = models.ForeignKey(
         User,
@@ -68,7 +68,8 @@ class Subscribe(models.Model):
     class Meta:
         ordering = ['-id']
         constraints = [
-            UniqueConstraint(fields=['user', 'author'], name='unique_subscription')
+            UniqueConstraint(fields=['user', 'author'],
+                             name='unique_subscription')
         ]
         verbose_name = 'Подписка'
         verbose_name_plural = 'Подписки'
